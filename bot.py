@@ -15,6 +15,10 @@ ALLOWED_STAFF_ROLE_IDS = [
     1563610472329257080,
     1563633264810262741
 ]
+
+# Channel Links
+RULES_CHANNEL_LINK = "https://discord.com/channels/1563610471934984243/1563619687986888897"
+TICKET_CHANNEL_LINK = "https://discord.com/channels/1563610471934984243/1563610474577399965"
 # -----------------------------------------------
 
 intents = discord.Intents.default()
@@ -26,7 +30,6 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def on_ready():
     print(f"Logged in as {bot.user.name} (ID: {bot.user.id})")
     try:
-        # Syncs slash commands globally across all servers the bot is in
         synced = await bot.tree.sync()
         print(f"Synced {len(synced)} command(s).")
     except Exception as e:
@@ -38,7 +41,7 @@ async def on_ready():
     rp_name="The Roleplay Name to set as their nickname"
 )
 async def whitelist(interaction: discord.Interaction, target: discord.Member, rp_name: str):
-    # Check if the user executing the command has at least one required staff role
+    # Check permission
     user_role_ids = [role.id for role in interaction.user.roles]
     has_permission = any(role_id in user_role_ids for role_id in ALLOWED_STAFF_ROLE_IDS)
 
@@ -49,14 +52,14 @@ async def whitelist(interaction: discord.Interaction, target: discord.Member, rp
         )
         return
 
-    # Defer response in case updating nick/roles takes a second
+    # Defer response while assigning roles/nickname
     await interaction.response.defer(ephemeral=False)
 
     try:
         # 1. Update target's nickname
         await target.edit(nick=rp_name)
 
-        # 2. Fetch and assign the specified roles
+        # 2. Assign specified roles
         roles_to_assign = []
         for role_id in ROLE_IDS_TO_ADD:
             role = interaction.guild.get_role(role_id)
@@ -66,12 +69,25 @@ async def whitelist(interaction: discord.Interaction, target: discord.Member, rp
         if roles_to_assign:
             await target.add_roles(*roles_to_assign)
 
-        # 3. Send confirmation message
-        await interaction.followup.send(
-            f"✅ **{target.mention}** has been whitelisted!\n"
-            f"• **RP Name:** `{rp_name}`\n"
-            f"• **Roles Added:** {', '.join([r.mention for r in roles_to_assign])}"
+        # 3. Create Custom Embed Message
+        embed = discord.Embed(
+            title=f"Welcome to Westshore RP, {target.display_name}!",
+            description=(
+                "Your initial whitelist permissions are currently being assigned to your Discord account. "
+                "If you do not see the changes, please notify us in this ticket.\n\n"
+                "Should you need help or have any concerns, feel free to post them below and a member of our staff will assist you as soon as possible.\n\n"
+                f"Make sure you familiarise yourself with our community rules and regulations, available in [Rules Channel]({RULES_CHANNEL_LINK}) "
+                "to stay compliant with server expectations.\n\n"
+                f"If you have any issues don't hesitate to open a ticket: [Support Ticket]({TICKET_CHANNEL_LINK})"
+            ),
+            color=discord.Color.blue()
         )
+        
+        embed.add_field(name="Assigned RP Name", value=f"`{rp_name}`", inline=True)
+        embed.set_footer(text="Westshore RP Staff Team")
+
+        # Send the Embed Message
+        await interaction.followup.send(content=f"{target.mention}", embed=embed)
 
     except discord.Forbidden:
         await interaction.followup.send(
@@ -81,5 +97,4 @@ async def whitelist(interaction: discord.Interaction, target: discord.Member, rp
     except Exception as e:
         await interaction.followup.send(f"⚠️ An unexpected error occurred: {e}")
 
-# Replace with your actual bot token
 bot.run("MTU2MzkxOTExNjI3MDU2NzUxNg.GGm5np._tLZOemotHhgaIyI9sXwLJ39i147hBklswYfTI")
